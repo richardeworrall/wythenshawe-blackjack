@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use crate::cards::*;
 use crate::strategy::*;
+use crate::game::*;
 
 pub struct Player<'a>
 {
@@ -33,5 +34,10 @@ impl Player<'_>
             score: 0,
             strategy
         }
+    }
+
+    pub fn choose_next(&self, game: &Game) -> Vec<Card>
+    {
+        self.strategy.choose_next(&self.hand, &game.log)
     }
 }
