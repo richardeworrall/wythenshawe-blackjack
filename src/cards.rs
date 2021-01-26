@@ -1,6 +1,4 @@
-use strum_macros::EnumIter;
-
-#[derive(EnumIter, PartialEq, Clone, Copy, Hash, Eq)]
+#[derive(PartialEq, Clone, Copy, Hash, Eq)]
 pub enum Suit
 {
     Diamonds,
@@ -21,7 +19,7 @@ impl std::fmt::Debug for Suit {
     }
 }
 
-#[derive(EnumIter, PartialEq, Clone, Copy, Hash, Eq)]
+#[derive(PartialEq, Clone, Copy, Hash, Eq)]
 pub enum Rank
 {
     Val(i32),
