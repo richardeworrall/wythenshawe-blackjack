@@ -8,7 +8,7 @@ use game::*;
 
 fn main() {
 
-    let mut game = Game::new(2, 0);
+    let mut game = Game::new(4, 0);
     
     println!("{:?}", game);
 

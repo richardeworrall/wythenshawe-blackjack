@@ -1,5 +1,3 @@
-use strum::IntoEnumIterator;
-
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 
@@ -9,11 +7,24 @@ use crate::strategy::*;
 use crate::blackjack::*;
 
 use std::fmt::Debug;
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Action(pub usize, pub Card);
+pub enum Action
+{
+    Played(Vec<Card>),
+    Nominated(Suit),
+    PickedUp(i32),
+    First(Card),
+    Skipped
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Turn
+{
+    pub player: Option<usize>,
+    pub action: Action
+}
 
 #[derive(Debug)]
 pub struct Game<'a>
@@ -21,8 +32,9 @@ pub struct Game<'a>
     pub players: Vec<Player<'a>>,
     pub deck: Vec<Card>,
     pub discard_pile: Vec<Card>,
-    pub log: Vec<Action>,
-    pub next_to_play: usize
+    pub log: Vec<Turn>,
+    pub curr_player_id: usize,
+    pub penalty: i32
 }
 
 impl<'a> Game<'a>
@@ -43,16 +55,22 @@ impl<'a> Game<'a>
             players: players,
             deck: Vec::<Card>::new(),
             discard_pile: Vec::<Card>::new(),
-            next_to_play: first_to_play,
-            log: Vec::<Action>::new()
+            curr_player_id: first_to_play,
+            log: Vec::<Turn>::new(),
+            penalty: 0
         };
 
         game.populate_deck();
         game.deal();
 
         let first = game.draw();
+        
+        if is_penalty_card(first) {
+            game.penalty += penalty_value(first).unwrap();
+        }
+
         game.discard_pile.push(first);
-        game.log.push(Action(usize::MAX,first));
+        game.log.push(Turn { player: None, action: Action::First(first) });
         game
     }
 
@@ -93,55 +111,124 @@ impl<'a> Game<'a>
         }
     }
 
-    pub fn is_valid(&self, chain: &[Card]) -> bool
+    fn is_valid(&self, chain: &[Card]) -> bool
     {
-        if !can_follow(*self.discard_pile.last().unwrap(), chain[0]) { return false; }
+        if !can_follow(&self.log, chain[0]) { return false; }
 
         for i in 1..chain.len()
         {
             if !can_link(chain[i-1], chain[i]) { return false; }
         }
         
+        if !can_end_with(*chain.last().unwrap()) { return false; }
+
         true
+    }
+
+    fn player_should_skip(&self) -> bool
+    {
+        match &self.log.last().unwrap().action {
+            Action::Played(c) => match c.last().unwrap() {
+                Card { rank: Rank::Val(8), suit: _ } => true,
+                _ => false
+            },
+            _ => false
+        }
     }
 
     pub fn run(&mut self)
     {
-        println!("First card is {:?}", self.discard_pile.first().unwrap());
+        println!("First card is {:?}", self.discard_pile.last().unwrap());
 
-        loop {            
-            let before = Instant::now();
-            let chain = self.players[self.next_to_play].choose_next(&self);
-            let after = Instant::now();
+        loop {
+            
+            let chain = self.players[self.curr_player_id].choose_next(&self.log);
 
             if chain.len() == 0 {
-                let pick_up = self.draw();
-                let hand_before : Vec<Card> = self.players[self.next_to_play].hand.iter().cloned().collect();
-                self.players[self.next_to_play].hand.insert(pick_up);
-                let hand_after : Vec<Card> = self.players[self.next_to_play].hand.iter().cloned().collect();
-                println!("{} can't go; picks up {:?}. Hand Before: {:?} Hand After: {:?}", 
-                    self.players[self.next_to_play].name, pick_up, hand_before, hand_after);
+                
+                if self.penalty > 0 {
+
+                    for _ in 0..self.penalty {
+                        let next = self.draw();
+                        self.players[self.curr_player_id].hand.insert(next);
+                    }
+
+                    self.log.push(Turn {
+                        player: Some(self.curr_player_id),
+                        action: Action::PickedUp(self.penalty)
+                    });
+
+                    println!("{} picks up {}.", self.players[self.curr_player_id].name, self.penalty);
+
+                    self.penalty = 0;
+
+                } else if self.player_should_skip() {
+                    
+                    self.log.push(Turn {
+                        player: Some(self.curr_player_id),
+                        action: Action::Skipped
+                    });
+
+                    println!("{} misses a go.", self.players[self.curr_player_id].name);
+
+                } else {
+                    
+                    let pick_up = self.draw();
+                    self.players[self.curr_player_id].hand.insert(pick_up);
+                    
+                    self.log.push(Turn {
+                        player: Some(self.curr_player_id),
+                        action: Action::PickedUp(1)
+                    });
+
+                    println!("{} can't go; picks up {:?}.", self.players[self.curr_player_id].name, pick_up);
+                }
+
             } else {
-                if !self.is_valid(&chain) { panic!("{} played invalid strategy!", self.players[self.next_to_play].name) }
+
+                if !self.is_valid(&chain) { 
+                    panic!("{} tried to play an invalid strategy!", self.players[self.curr_player_id].name);
+                }
                 else { 
+
+                    for c in chain.iter() {
+                        if is_penalty_card(*c) {
+                            self.penalty += penalty_value(*c).unwrap();
+                        } else {
+                            self.penalty = 0;
+                        }
+                    }
+                    
                     self.discard_pile.extend(&chain);
-                    for c in &chain { self.log.push(Action(self.next_to_play, *c)) }
-                    let hand_before : Vec<Card> = self.players[self.next_to_play].hand.iter().cloned().collect();
-                    for c in &chain { self.players[self.next_to_play].hand.remove(&c); }
-                    let hand_after : Vec<Card> = self.players[self.next_to_play].hand.iter().cloned().collect();
-                    println!("{} plays: {:?}. Hand Before: {:?} Hand After: {:?}", 
-                        self.players[self.next_to_play].name, &chain, hand_before, hand_after);
+                    
+                    self.log.push(Turn { 
+                        player: Some(self.curr_player_id), 
+                        action: Action::Played(chain.clone()) 
+                    });
+
+                    println!("{} plays: {:?}", self.players[self.curr_player_id].name, &chain);
+
+                    if chain.last().unwrap().rank == Rank::Ace {
+                        let suit = self.players[self.curr_player_id].choose_suit(&self.log);
+                        
+                        self.log.push(Turn { 
+                            player: Some(self.curr_player_id), 
+                            action: Action::Nominated(suit) 
+                        });
+
+                        println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit);
+                    }
+                    
+                    for c in &chain { self.players[self.curr_player_id].hand.remove(&c); }
                 }
             }
 
-            println!("(decision reached in {:?})", after - before);
-
-            if self.players[self.next_to_play].hand.is_empty() {
-                println!("{} wins!", self.players[self.next_to_play].name);
+            if self.players[self.curr_player_id].hand.is_empty() {
+                println!("{} wins!", self.players[self.curr_player_id].name);
                 break;
             } else {
-                self.next_to_play += 1;
-                if self.next_to_play == self.players.len() { self.next_to_play = 0; }
+                self.curr_player_id += 1;
+                if self.curr_player_id == self.players.len() { self.curr_player_id = 0; }
             }
         }
 

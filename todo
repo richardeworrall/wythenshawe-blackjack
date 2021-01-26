@@ -1,0 +1,20 @@
+To Do
+------------------------------------------
+
+- Anything can follow an ace
+- Strategy should return an action (which the game then validates, then applies)
+- Option for King --> reverse
+- Can end on king, but must pick up one
+- Last card(s)!
+- Must go if you have a valid chain
+- Multiple games up to 501 etc.
+- Check if you can link Black Jack -> 2
+
+
+Done
+------------------------------------------
+
+- Can't play King on its own
+- Block black jack with a red jack
+- Aces change suit -> can follow with anything, or nominate next suit
+- Can chain penalty cards -> change strategy if facing a pick up!

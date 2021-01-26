@@ -52,12 +52,23 @@ pub enum Colour
 }
 
 impl Suit {
+    
     pub fn colour(&self) -> Colour
     {
         match self {
             Suit::Spades | Suit::Clubs => Colour::Black,
             Suit::Hearts | Suit::Diamonds => Colour::Red    
         }
+    }
+
+    pub fn is_black(&self) -> bool
+    {
+        self.colour() == Colour::Black
+    }
+
+    pub fn is_red(&self) -> bool
+    {
+        self.colour() == Colour::Red
     }
 
     pub fn all() -> [Suit;4]
