@@ -34,8 +34,7 @@ pub struct Game<'a>
     pub deck: Vec<Card>,
     pub discard_pile: Vec<Card>,
     pub log: Vec<Turn>,
-    pub curr_player_id: usize,
-    pub penalty: i32
+    pub curr_player_id: usize
 }
 
 impl<'a> Game<'a>
@@ -63,8 +62,7 @@ impl<'a> Game<'a>
             deck: Vec::<Card>::new(),
             discard_pile: Vec::<Card>::new(),
             curr_player_id: first_to_play,
-            log: Vec::<Turn>::new(),
-            penalty: 0
+            log: Vec::<Turn>::new()
         };
 
         game.populate_deck();
@@ -72,10 +70,6 @@ impl<'a> Game<'a>
 
         let first = game.draw();
         
-        if is_penalty_card(first) {
-            game.penalty += penalty_value(first).unwrap();
-        }
-
         game.discard_pile.push(first);
         game.log.push(Turn { player: None, action: Action::First(first) });
         game
@@ -150,21 +144,21 @@ impl<'a> Game<'a>
 
             if chain.len() == 0 {
                 
-                if self.penalty > 0 {
+                let penalty = outstanding_penalty(&self.log);
 
-                    for _ in 0..self.penalty {
+                if penalty > 0 {
+
+                    for _ in 0..penalty {
                         let next = self.draw();
                         self.players[self.curr_player_id].hand.insert(next);
                     }
 
                     self.log.push(Turn {
                         player: Some(self.curr_player_id),
-                        action: Action::PickedUp(self.penalty)
+                        action: Action::PickedUp(penalty)
                     });
 
-                    println!("{} picks up {}.", self.players[self.curr_player_id].name, self.penalty);
-
-                    self.penalty = 0;
+                    println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty);
 
                 } else if self.player_should_skip() {
                     
@@ -178,6 +172,7 @@ impl<'a> Game<'a>
                 } else {
                     
                     let pick_up = self.draw();
+                    
                     self.players[self.curr_player_id].hand.insert(pick_up);
                     
                     self.log.push(Turn {
@@ -194,14 +189,6 @@ impl<'a> Game<'a>
                     panic!("{} tried to play an invalid strategy!", self.players[self.curr_player_id].name);
                 }
                 else {
-
-                    for c in chain.iter() {
-                        if is_penalty_card(*c) {
-                            self.penalty += penalty_value(*c).unwrap();
-                        } else {
-                            self.penalty = 0;
-                        }
-                    }
                     
                     self.discard_pile.extend(&chain);
                     

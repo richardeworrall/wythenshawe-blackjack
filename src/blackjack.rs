@@ -20,6 +20,35 @@ pub fn penalty_value(card: Card) -> Option<i32>
     }
 }
 
+pub fn outstanding_penalty(log: &[Turn]) -> i32
+{
+    let mut penalty = 0;
+
+    for turn in log.iter().rev() {
+        match &turn.action {
+            Action::Played(chain) => {
+                for i in (0..chain.len()).rev() {
+                    let card = chain[i];
+                    if let Some(p) = penalty_value(card) {
+                        penalty += p;
+                    } else {
+                        return penalty;
+                    }
+                }
+            },
+            Action::First(card) => {
+                if let Some(p) = penalty_value(*card) {
+                    penalty += p;
+                }
+                return penalty;
+            }
+            _ => { return penalty; }
+        }
+    }
+
+    return penalty;
+}
+
 pub fn card_score(card: &Card) -> i32
 {
     match card {

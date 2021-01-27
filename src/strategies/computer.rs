@@ -35,29 +35,6 @@ fn choose_suit(hand: &HashSet<Card>) -> Suit
                 .map(|(k, _v)| k).unwrap()
 }
 
-fn outstanding_penalty(log: &[Turn]) -> i32
-{
-    let mut penalty = 0;
-
-    for turn in log.iter().rev() {
-        match &turn.action {
-            Action::Played(chain) => {
-                for i in (0..chain.len()).rev() {
-                    let card = chain[i];
-                    if let Some(p) = penalty_value(card) {
-                        penalty += p;
-                    } else {
-                        return penalty;
-                    }
-                }
-            },
-            _ => { return penalty; }
-        }
-    }
-
-    return penalty;
-}
-
 const PICK_UP_WEIGHTING : f32 = 10.0;
 
 fn score(outstanding_penalty: i32, chain: &[Card]) -> f32
