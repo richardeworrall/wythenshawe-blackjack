@@ -3,13 +3,9 @@ use crate::game::*;
 
 use std::collections::HashSet;
 
-pub const STARTING_CARD_COUNT : usize = 7;
+use streaming_iterator::*;
 
-pub fn is_penalty_card(card: Card) -> bool
-{
-    if let Some(_) = penalty_value(card) { return true; }
-    false
-}
+pub const STARTING_CARD_COUNT : usize = 7;
 
 pub fn penalty_value(card: Card) -> Option<i32>
 {
@@ -67,28 +63,28 @@ where
     chain.map(|c| card_score(c)).sum()
 }
 
-fn can_follow_card(active: bool, prev: Card, next: Card) -> bool
-{
-    if active {
-        match prev {
-            Card { rank: Rank::Jack, suit: s } if s.is_black() => {
-                match next { 
-                    Card { rank: Rank::Jack, suit: _ } => true,
-                    Card { rank: Rank::Val(2), suit: s2 } if s == s2  => true,
-                    _ => false
-                }
-            },
-            Card { rank: Rank::Val(2), suit: _ } => { next.rank == Rank::Val(2) },
-            Card { rank: Rank::Val(8), suit: _ } => { next.rank == Rank::Val(8) },
-            _ => prev.suit == next.suit || prev.rank == next.rank
-        }
-    } else {
-        prev.suit == next.suit || prev.rank == next.rank
-    }
-}
-
 pub fn can_follow(log: &[Turn], next: Card) -> bool
 {
+    fn can_follow_card(active: bool, prev: Card, next: Card) -> bool
+    {
+        if active {
+            match prev {
+                Card { rank: Rank::Jack, suit: s } if s.is_black() => {
+                    match next { 
+                        Card { rank: Rank::Jack, suit: _ } => true,
+                        Card { rank: Rank::Val(2), suit: s2 } if s == s2  => true,
+                        _ => false
+                    }
+                },
+                Card { rank: Rank::Val(2), suit: _ } => { next.rank == Rank::Val(2) },
+                Card { rank: Rank::Val(8), suit: _ } => { next.rank == Rank::Val(8) },
+                _ => prev.suit == next.suit || prev.rank == next.rank
+            }
+        } else {
+            prev.suit == next.suit || prev.rank == next.rank
+        }
+    }
+
     let mut idx = log.len()-1;
     let mut is_active = true;
 
@@ -122,12 +118,7 @@ pub fn can_link(prev: Card, next: Card) -> bool
 
 pub fn can_go(log: &[Turn], hand: &HashSet<Card>) -> bool
 {
-    for card in hand
-    {
-        if can_follow(log, *card) { return true; }
-    }
-
-    return false;
+    hand.iter().any(|card| can_follow(log, *card))
 }
 
 pub fn is_valid(log: &[Turn], chain: &[Card]) -> bool
@@ -140,4 +131,43 @@ pub fn is_valid(log: &[Turn], chain: &[Card]) -> bool
     }
 
     true
+}
+
+pub fn make_chain_iterator<'a>(hand: &HashSet<Card>) -> impl StreamingIterator<Item = &'a [Card]>
+{
+    use std::marker;
+
+    struct ChainIterator<'a>
+    {
+        pub stack: Vec<Vec<Card>>,
+        pub chain_length: usize,
+        pub idx: usize,
+        _marker: marker::PhantomData<&'a Card>
+    }
+
+    impl<'a> StreamingIterator for ChainIterator<'a> {
+        
+        type Item = &'a[Card];
+
+        fn advance(&mut self) 
+        { 
+            todo!()
+        }
+        
+        fn get(&self) -> std::option::Option<&<Self as streaming_iterator::StreamingIterator>::Item> 
+        { 
+            todo!() 
+        }
+    }
+
+    let mut iterator = ChainIterator { 
+        stack: Vec::new(),
+        chain_length: 0,
+        idx: 0,
+        _marker: marker::PhantomData
+    };
+
+    iterator.stack.push(hand.iter().cloned().collect());
+
+    iterator
 }
