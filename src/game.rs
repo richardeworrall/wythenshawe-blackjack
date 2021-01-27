@@ -1,9 +1,10 @@
 use rand::thread_rng;
+use rand::Rng;
 use rand::seq::SliceRandom;
 
 use crate::player::*;
 use crate::cards::*;
-use crate::strategy::*;
+use crate::strategies::{minimise_score::*,human::*};
 use crate::blackjack::*;
 
 use std::fmt::Debug;
@@ -45,10 +46,16 @@ impl<'a> Game<'a>
         if num_players > 6 { panic!("Six players max") };
         if first_to_play >= num_players { panic!("Invalid first player") };
 
+        let human_player = rand::thread_rng().gen_range(0..num_players);
+
         let mut players = Vec::<Player>::new();
         
         for i in 0..num_players {
-            players.push(Player::new(format!("Player {}", i), &MinimiseScoreStrategy {}));
+            if i == human_player {
+                players.push(Player::new(format!("Player {} (Human)", i), &HumanStrategy {}));
+            } else {
+                players.push(Player::new(format!("Player {}", i), &MinimiseScoreStrategy {}));
+            }
         }
 
         let mut game = Game {
@@ -111,20 +118,6 @@ impl<'a> Game<'a>
         }
     }
 
-    fn is_valid(&self, chain: &[Card]) -> bool
-    {
-        if !can_follow(&self.log, chain[0]) { return false; }
-
-        for i in 1..chain.len()
-        {
-            if !can_link(chain[i-1], chain[i]) { return false; }
-        }
-        
-        if !can_end_with(*chain.last().unwrap()) { return false; }
-
-        true
-    }
-
     fn player_should_skip(&self) -> bool
     {
         match &self.log.last().unwrap().action {
@@ -181,15 +174,15 @@ impl<'a> Game<'a>
                         action: Action::PickedUp(1)
                     });
 
-                    println!("{} can't go; picks up {:?}.", self.players[self.curr_player_id].name, pick_up);
+                    println!("{} can't go; picks up {}.", self.players[self.curr_player_id].name, 1);
                 }
 
             } else {
 
-                if !self.is_valid(&chain) { 
+                if !is_valid(&self.log, &chain) { 
                     panic!("{} tried to play an invalid strategy!", self.players[self.curr_player_id].name);
                 }
-                else { 
+                else {
 
                     for c in chain.iter() {
                         if is_penalty_card(*c) {

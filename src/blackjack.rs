@@ -1,6 +1,8 @@
 use crate::cards::*;
 use crate::game::*;
 
+use std::collections::HashSet;
+
 pub const STARTING_CARD_COUNT : usize = 7;
 
 pub fn is_penalty_card(card: Card) -> bool
@@ -87,4 +89,28 @@ pub fn can_end_with(last: Card) -> bool
         Card { rank: Rank::King, suit: _ } => false,
         _ => true
     }
+}
+
+pub fn can_go(log: &[Turn], hand: &HashSet<Card>) -> bool
+{
+    for card in hand
+    {
+        if can_follow(log, *card) { return true; }
+    }
+    
+    return false;
+}
+
+pub fn is_valid(log: &[Turn], chain: &[Card]) -> bool
+{
+    if !can_follow(log, chain[0]) { return false; }
+
+    for i in 1..chain.len()
+    {
+        if !can_link(chain[i-1], chain[i]) { return false; }
+    }
+    
+    if !can_end_with(*chain.last().unwrap()) { return false; }
+
+    true
 }

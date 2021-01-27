@@ -1,8 +1,13 @@
 use std::collections::HashSet;
 
 use crate::cards::*;
-use crate::strategy::*;
 use crate::game::*;
+
+pub trait Strategy {
+    fn choose_next(&self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>;
+    fn choose_suit(&self, hand: &HashSet<Card>, log: &[Turn]) -> Suit;
+    fn name(&self) -> &str;
+}
 
 pub struct Player<'a>
 {
