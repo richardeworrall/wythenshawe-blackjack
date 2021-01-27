@@ -81,14 +81,14 @@ pub fn can_link(prev: Card, next: Card) -> bool
 {
     prev.rank == next.rank
     || (prev.suit == next.suit && Rank::adjacent(prev.rank, next.rank))
-}
-
-pub fn can_end_with(last: Card) -> bool
-{
-    match last {
-        Card { rank: Rank::King, suit: _ } => false,
-        _ => true
-    }
+    || (prev.rank == Rank::King
+        && prev.suit == next.suit 
+        && match next.rank {
+            Rank::Val(2) | Rank::Val(8) => false,
+            Rank::Jack => next.suit.is_red(),
+            _ => true
+        })
+    || prev.rank == Rank::Ace
 }
 
 pub fn can_go(log: &[Turn], hand: &HashSet<Card>) -> bool
@@ -97,7 +97,7 @@ pub fn can_go(log: &[Turn], hand: &HashSet<Card>) -> bool
     {
         if can_follow(log, *card) { return true; }
     }
-    
+
     return false;
 }
 
@@ -109,8 +109,6 @@ pub fn is_valid(log: &[Turn], chain: &[Card]) -> bool
     {
         if !can_link(chain[i-1], chain[i]) { return false; }
     }
-    
-    if !can_end_with(*chain.last().unwrap()) { return false; }
 
     true
 }

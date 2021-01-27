@@ -4,7 +4,7 @@ use rand::seq::SliceRandom;
 
 use crate::player::*;
 use crate::cards::*;
-use crate::strategies::{minimise_score::*,human::*};
+use crate::strategies::{computer::*,human::*};
 use crate::blackjack::*;
 
 use std::fmt::Debug;
@@ -54,7 +54,7 @@ impl<'a> Game<'a>
             if i == human_player {
                 players.push(Player::new(format!("Player {} (Human)", i), &HumanStrategy {}));
             } else {
-                players.push(Player::new(format!("Player {}", i), &MinimiseScoreStrategy {}));
+                players.push(Player::new(format!("Player {}", i), &ComputerStrategy {}));
             }
         }
 
@@ -133,6 +133,17 @@ impl<'a> Game<'a>
     {
         println!("First card is {:?}", self.discard_pile.last().unwrap());
 
+        if self.discard_pile.last().unwrap().rank == Rank::Ace {
+            let suit = self.players[self.curr_player_id].choose_suit(&self.log);
+            
+            self.log.push(Turn { 
+                player: Some(self.curr_player_id), 
+                action: Action::Nominated(suit) 
+            });
+
+            println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit);
+        }
+
         loop {
             
             let chain = self.players[self.curr_player_id].choose_next(&self.log);
@@ -201,15 +212,31 @@ impl<'a> Game<'a>
 
                     println!("{} plays: {:?}", self.players[self.curr_player_id].name, &chain);
 
-                    if chain.last().unwrap().rank == Rank::Ace {
-                        let suit = self.players[self.curr_player_id].choose_suit(&self.log);
+                    match chain.last().unwrap().rank {
+                        Rank::Ace => {
+                            let suit = self.players[self.curr_player_id].choose_suit(&self.log);
                         
-                        self.log.push(Turn { 
-                            player: Some(self.curr_player_id), 
-                            action: Action::Nominated(suit) 
-                        });
+                            self.log.push(Turn { 
+                                player: Some(self.curr_player_id), 
+                                action: Action::Nominated(suit) 
+                            });
+    
+                            println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit);
+                        },
+                        Rank::King => {
+                            
+                            let pick_up = self.draw();
+                            self.players[self.curr_player_id].hand.insert(pick_up);
+                            
+                            self.log.push(Turn {
+                                player: Some(self.curr_player_id),
+                                action: Action::PickedUp(1)
+                            });
 
-                        println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit);
+                            println!("{} finished with {:?} so picks up.", 
+                                self.players[self.curr_player_id].name, chain.last().unwrap());
+                        },
+                        _ => ()
                     }
                     
                     for c in &chain { self.players[self.curr_player_id].hand.remove(&c); }

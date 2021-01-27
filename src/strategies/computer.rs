@@ -5,9 +5,9 @@ use crate::player::*;
 
 use std::collections::{HashSet,HashMap};
 
-pub struct MinimiseScoreStrategy {}
+pub struct ComputerStrategy {}
 
-impl Strategy for MinimiseScoreStrategy
+impl Strategy for ComputerStrategy
 {
     fn choose_next(&self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>
     {
@@ -19,7 +19,7 @@ impl Strategy for MinimiseScoreStrategy
         choose_suit(hand)
     }
 
-    fn name(&self) -> &str { "MinimiseScoreStrategy" }
+    fn name(&self) -> &str { "ComputerStrategy" }
 }
 
 fn choose_suit(hand: &HashSet<Card>) -> Suit
@@ -35,17 +35,67 @@ fn choose_suit(hand: &HashSet<Card>) -> Suit
                 .map(|(k, _v)| k).unwrap()
 }
 
+fn outstanding_penalty(log: &[Turn]) -> i32
+{
+    let mut penalty = 0;
+
+    for turn in log.iter().rev() {
+        match &turn.action {
+            Action::Played(chain) => {
+                for i in (0..chain.len()).rev() {
+                    let card = chain[i];
+                    if let Some(p) = penalty_value(card) {
+                        penalty += p;
+                    } else {
+                        return penalty;
+                    }
+                }
+            },
+            _ => { return penalty; }
+        }
+    }
+
+    return penalty;
+}
+
+const PICK_UP_WEIGHTING : f32 = 10.0;
+
+fn score(outstanding_penalty: i32, chain: &[Card]) -> f32
+{
+    let mut score = chain_score(chain.iter()) as f32;
+
+    for i in (0..chain.len()).rev() {
+        let card = chain[i];
+        if let Some(penalty) = penalty_value(card) {
+            score += penalty as f32 * PICK_UP_WEIGHTING;
+        } else {
+            return score;
+        }
+    }
+
+    if outstanding_penalty > 0 {
+        score += outstanding_penalty as f32 * PICK_UP_WEIGHTING;
+    }
+
+    return score;
+}
+
 fn find_best_valid(log: &[Turn], hand: &HashSet<Card>) -> Vec<Card>
 {
-    let mut best_score = 0;
+    let mut best_score : f32 = 0.0;
+    
     let mut best = Vec::<Card>::new();
     let mut n_considered = 0;
 
     let mut scratch = hand.iter().cloned().collect::<Vec<Card>>();
 
+    let outstanding_penalty = outstanding_penalty(log);
+
+    println!("Outstanding penalty: {}", outstanding_penalty);
+
     let mut save_if_better = |chain: &[Card]| {
         n_considered += 1;
-        let this_score = chain_score(chain.iter());
+        let this_score = score(outstanding_penalty, chain);
         if this_score > best_score {
             best_score = this_score;
             best.clear();
@@ -57,7 +107,7 @@ fn find_best_valid(log: &[Turn], hand: &HashSet<Card>) -> Vec<Card>
     where 
         T : for<'a> FnMut(&'a [Card])
     {
-        if can_end_with(cards[chain_length-1]) { save(&cards[0..chain_length]); }
+        save(&cards[0..chain_length]);
 
         let prev = cards[chain_length-1];
 

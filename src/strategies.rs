@@ -1,2 +1,2 @@
 pub mod human;
-pub mod minimise_score;
+pub mod computer;
