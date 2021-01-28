@@ -67,6 +67,13 @@ pub fn can_follow(log: &[Turn], next: Card) -> bool
 {
     fn can_follow_card(active: bool, prev: Card, next: Card) -> bool
     {
+        fn can_follow_nominal(prev: Card, next: Card) -> bool
+        {
+            next.rank == Rank::Ace 
+            || prev.suit == next.suit 
+            || prev.rank == next.rank
+        }
+        
         if active {
             match prev {
                 Card { rank: Rank::Jack, suit: s } if s.is_black() => {
@@ -78,10 +85,12 @@ pub fn can_follow(log: &[Turn], next: Card) -> bool
                 },
                 Card { rank: Rank::Val(2), suit: _ } => { next.rank == Rank::Val(2) },
                 Card { rank: Rank::Val(8), suit: _ } => { next.rank == Rank::Val(8) },
-                _ => prev.suit == next.suit || prev.rank == next.rank
+                _ => {
+                    can_follow_nominal(prev, next)
+                }
             }
         } else {
-            prev.suit == next.suit || prev.rank == next.rank
+            can_follow_nominal(prev, next)
         }
     }
 
@@ -90,10 +99,16 @@ pub fn can_follow(log: &[Turn], next: Card) -> bool
 
     loop {
         match &log[idx].action {
-            Action::First(prev) => { return can_follow_card(is_active, *prev, next); },
-            Action::Played(chain) => { return can_follow_card(is_active, *chain.last().unwrap(), next) },
-            Action::Nominated(s) => { return next.suit == *s },
-            _ => {
+            Action::First(prev) => { 
+                return can_follow_card(is_active, *prev, next); 
+            },
+            Action::Played(chain) => { 
+                return can_follow_card(is_active, *chain.last().unwrap(), next) 
+            },
+            Action::Nominated(s) => { 
+                return next.suit == *s || next.rank == Rank::Ace
+            },
+            Action::PickedUp(_) | Action::Skipped => {
                 is_active = false;
                 idx -= 1;
                 continue;
@@ -104,16 +119,19 @@ pub fn can_follow(log: &[Turn], next: Card) -> bool
 
 pub fn can_link(prev: Card, next: Card) -> bool
 {
+    if (prev.rank == Rank::Ace) ^ (next.rank == Rank::Ace) {
+        return false;
+    }
+
     prev.rank == next.rank
     || (prev.suit == next.suit && Rank::adjacent(prev.rank, next.rank))
     || (prev.rank == Rank::King
         && prev.suit == next.suit 
         && match next.rank {
-            Rank::Val(2) | Rank::Val(8) => false,
+            Rank::Val(2) | Rank::Val(8) | Rank::Ace => false,
             Rank::Jack => next.suit.is_red(),
             _ => true
         })
-    || prev.rank == Rank::Ace
 }
 
 pub fn can_go(log: &[Turn], hand: &HashSet<Card>) -> bool

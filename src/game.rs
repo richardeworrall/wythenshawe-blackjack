@@ -50,6 +50,7 @@ impl<'a> Game<'a>
         let mut players = Vec::<Player>::new();
         
         for i in 0..num_players {
+
             if i == human_player {
                 players.push(Player::new(format!("Player {} (Human)", i), &HumanStrategy {}));
             } else {
@@ -97,15 +98,7 @@ impl<'a> Game<'a>
         match self.deck.pop() {
             Some(c) => return c,
             None => {
-                
-                for i in 0..self.discard_pile.len()-1 {
-                    self.deck.push(self.discard_pile[i]);
-                }
-
-                let last = self.discard_pile[self.discard_pile.len()-1];
-                self.discard_pile.clear();
-                self.discard_pile.push(last);
-
+                self.deck.append(&mut self.discard_pile);
                 self.deck.shuffle(&mut thread_rng());
                 self.deck.pop().unwrap()
             }
@@ -144,7 +137,10 @@ impl<'a> Game<'a>
 
             if chain.len() == 0 {
                 
-                let penalty = outstanding_penalty(&self.log);
+                let raw_penalty = outstanding_penalty(&self.log);
+
+                let penalty = raw_penalty
+                                .min((self.deck.len() + self.discard_pile.len()) as i32);
 
                 if penalty > 0 {
 
@@ -159,6 +155,12 @@ impl<'a> Game<'a>
                     });
 
                     println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty);
+                    
+                    if penalty < raw_penalty {
+                        println!("{} picks up {} (deck constrained).", self.players[self.curr_player_id].name, penalty);
+                    } else  {
+                        println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty);
+                    }
 
                 } else if self.player_should_skip() {
                     

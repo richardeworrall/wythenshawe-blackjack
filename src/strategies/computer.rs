@@ -57,34 +57,19 @@ fn score(outstanding_penalty: i32, chain: &[Card]) -> f32
     return score;
 }
 
-fn find_best_valid(log: &[Turn], hand: &HashSet<Card>) -> Vec<Card>
+const MAX_PERMUTATIONS : i32 = 10_000;
+
+fn iterate_valid_chains<T>(log: &[Turn], scratch: &mut [Card], ctr: &mut i32, action: &mut T)
+where
+    T : for<'a> FnMut(&'a [Card])
 {
-    let mut best_score : f32 = 0.0;
-    
-    let mut best = Vec::<Card>::new();
-    let mut n_considered = 0;
-
-    let mut scratch = hand.iter().cloned().collect::<Vec<Card>>();
-
-    let outstanding_penalty = outstanding_penalty(log);
-
-    println!("Outstanding penalty: {}", outstanding_penalty);
-
-    let mut save_if_better = |chain: &[Card]| {
-        n_considered += 1;
-        let this_score = score(outstanding_penalty, chain);
-        if this_score > best_score {
-            best_score = this_score;
-            best.clear();
-            best.extend_from_slice(chain)
-        }
-    };
-
-    fn iterate_extensions<T>(chain_length: usize, cards: &[Card], save: &mut T) 
-    where 
+    fn iterate_extensions<T>(chain_length: usize, cards: &[Card], ctr: &mut i32, action: &mut T) 
+    where
         T : for<'a> FnMut(&'a [Card])
     {
-        save(&cards[0..chain_length]);
+        action(&cards[0..chain_length]);
+        
+        *ctr += 1; if *ctr > MAX_PERMUTATIONS { return; }
 
         let prev = cards[chain_length-1];
 
@@ -95,7 +80,7 @@ fn find_best_valid(log: &[Turn], hand: &HashSet<Card>) -> Vec<Card>
             if !can_link(prev, cards[i]) { continue; }
             if i != chain_length { scratch.swap(chain_length, i); }
 
-            iterate_extensions(chain_length+1, &scratch, save);
+            iterate_extensions(chain_length + 1, &scratch, ctr, action);
         }
     }
     
@@ -104,8 +89,29 @@ fn find_best_valid(log: &[Turn], hand: &HashSet<Card>) -> Vec<Card>
         if !can_follow(log, scratch[f]) { continue; }
         if f != 0 { scratch.swap(0, f); }
 
-        iterate_extensions(1, &scratch, &mut save_if_better);
+        iterate_extensions(1, &scratch, ctr, action);
     }
+}
+
+fn find_best_valid(log: &[Turn], hand: &HashSet<Card>) -> Vec<Card>
+{
+    let mut best_score : f32 = 0.0;
+    let mut best = Vec::<Card>::new();
+    let mut n_considered = 0;
+
+    let mut scratch = hand.iter().cloned().collect::<Vec<Card>>();
+
+    let outstanding_penalty = outstanding_penalty(log);
+
+    iterate_valid_chains(log, &mut scratch, &mut n_considered, 
+        &mut |chain: &[Card]| {
+        let this_score = score(outstanding_penalty, chain);
+        if this_score > best_score {
+            best_score = this_score;
+            best.clear();
+            best.extend_from_slice(chain)
+        }
+    });
 
     best
 }
