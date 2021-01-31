@@ -2,22 +2,17 @@ use std::collections::HashSet;
 
 use crate::cards::*;
 use crate::game::*;
+use crate::strategy::*;
 
-pub trait Strategy {
-    fn choose_next(&self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>;
-    fn choose_suit(&self, hand: &HashSet<Card>, log: &[Turn]) -> Suit;
-    fn name(&self) -> &str;
-}
-
-pub struct Player<'a>
+pub struct Player
 {
     pub name: String,
     pub hand: HashSet<Card>,
     pub score: i32,
-    pub strategy: &'a dyn Strategy
+    pub strategy: Box<dyn Strategy + Send>
 }
 
-impl std::fmt::Debug for Player<'_> {
+impl std::fmt::Debug for Player {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Player")
          .field("name", &self.name)
@@ -28,9 +23,9 @@ impl std::fmt::Debug for Player<'_> {
     }
 }
 
-impl Player<'_>
+impl Player
 {
-    pub fn new<'a>(name: String, strategy: &'a dyn Strategy) -> Player<'a>
+    pub fn new(name: String, strategy: Box<dyn Strategy + Send>) -> Player
     {
         Player 
         {

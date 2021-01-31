@@ -3,8 +3,6 @@ use crate::game::*;
 
 use std::collections::HashSet;
 
-use streaming_iterator::*;
-
 pub const STARTING_CARD_COUNT : usize = 7;
 
 pub fn penalty_value(card: Card) -> Option<i32>
@@ -149,43 +147,4 @@ pub fn is_valid(log: &[Turn], chain: &[Card]) -> bool
     }
 
     true
-}
-
-pub fn make_chain_iterator<'a>(hand: &HashSet<Card>) -> impl StreamingIterator<Item = &'a [Card]>
-{
-    use std::marker;
-
-    struct ChainIterator<'a>
-    {
-        pub stack: Vec<Vec<Card>>,
-        pub chain_length: usize,
-        pub idx: usize,
-        _marker: marker::PhantomData<&'a Card>
-    }
-
-    impl<'a> StreamingIterator for ChainIterator<'a> {
-        
-        type Item = &'a[Card];
-
-        fn advance(&mut self) 
-        { 
-            todo!()
-        }
-        
-        fn get(&self) -> std::option::Option<&<Self as streaming_iterator::StreamingIterator>::Item> 
-        { 
-            todo!() 
-        }
-    }
-
-    let mut iterator = ChainIterator { 
-        stack: Vec::new(),
-        chain_length: 0,
-        idx: 0,
-        _marker: marker::PhantomData
-    };
-
-    iterator.stack.push(hand.iter().cloned().collect());
-
-    iterator
 }

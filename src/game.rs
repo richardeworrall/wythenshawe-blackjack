@@ -1,10 +1,9 @@
 use rand::thread_rng;
-use rand::Rng;
 use rand::seq::SliceRandom;
 
 use crate::player::*;
 use crate::cards::*;
-use crate::strategies::{computer::*,human::*};
+use crate::strategy::*;
 use crate::blackjack::*;
 
 use std::fmt::Debug;
@@ -28,41 +27,37 @@ pub struct Turn
 }
 
 #[derive(Debug)]
-pub struct Game<'a>
+pub struct Game
 {
-    pub players: Vec<Player<'a>>,
+    pub players: Vec<Player>,
     pub deck: Vec<Card>,
     pub discard_pile: Vec<Card>,
     pub log: Vec<Turn>,
     pub curr_player_id: usize
 }
 
-impl<'a> Game<'a>
+impl Game
 {
-    pub fn new(num_players: usize, first_to_play: usize) -> Game<'a>
+    pub fn new(player_types: &[StrategyType]) -> Game
     {
-        if num_players < 2 { panic!("Two players min") };
-        if num_players > 6 { panic!("Six players max") };
-        if first_to_play >= num_players { panic!("Invalid first player") };
-
-        let human_player = rand::thread_rng().gen_range(0..num_players);
+        if player_types.len() < 2 { panic!("Two players min") };
+        if player_types.len() > 6 { panic!("Six players max") };
 
         let mut players = Vec::<Player>::new();
         
-        for i in 0..num_players {
+        for (i, pt) in player_types.iter().enumerate() {
 
-            if i == human_player {
-                players.push(Player::new(format!("Player {} (Human)", i), &HumanStrategy {}));
-            } else {
-                players.push(Player::new(format!("Player {}", i), &ComputerStrategy {}));
-            }
+            let strategy = make_strategy(pt);
+
+            players.push(Player::new(
+                format!("Player {} ({})", i, strategy.name()), strategy));
         }
 
         let mut game = Game {
             players: players,
             deck: Vec::<Card>::new(),
             discard_pile: Vec::<Card>::new(),
-            curr_player_id: first_to_play,
+            curr_player_id: 0,
             log: Vec::<Turn>::new()
         };
 
@@ -116,9 +111,9 @@ impl<'a> Game<'a>
         }
     }
 
-    pub fn run(&mut self)
+    pub fn run(&mut self) -> Vec<i32>
     {
-        println!("First card is {:?}", self.discard_pile.last().unwrap());
+        if crate::PRINT { println!("First card is {:?}", self.discard_pile.last().unwrap()); }
 
         if self.discard_pile.last().unwrap().rank == Rank::Ace {
             let suit = self.players[self.curr_player_id].choose_suit(&self.log);
@@ -128,7 +123,7 @@ impl<'a> Game<'a>
                 action: Action::Nominated(suit) 
             });
 
-            println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit);
+            if crate::PRINT { println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit); }
         }
 
         loop {
@@ -154,12 +149,15 @@ impl<'a> Game<'a>
                         action: Action::PickedUp(penalty)
                     });
 
-                    println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty);
+                    if crate::PRINT { 
+                        
+                        println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty); 
                     
-                    if penalty < raw_penalty {
-                        println!("{} picks up {} (deck constrained).", self.players[self.curr_player_id].name, penalty);
-                    } else  {
-                        println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty);
+                        if penalty < raw_penalty {
+                            println!("{} picks up {} (deck constrained).", self.players[self.curr_player_id].name, penalty);
+                        } else  {
+                            println!("{} picks up {}.", self.players[self.curr_player_id].name, penalty);
+                        }
                     }
 
                 } else if self.player_should_skip() {
@@ -169,7 +167,7 @@ impl<'a> Game<'a>
                         action: Action::Skipped
                     });
 
-                    println!("{} misses a go.", self.players[self.curr_player_id].name);
+                    if crate::PRINT { println!("{} misses a go.", self.players[self.curr_player_id].name); }
 
                 } else {
                     
@@ -182,7 +180,7 @@ impl<'a> Game<'a>
                         action: Action::PickedUp(1)
                     });
 
-                    println!("{} can't go; picks up {}.", self.players[self.curr_player_id].name, 1);
+                    if crate::PRINT { println!("{} can't go; picks up {}.", self.players[self.curr_player_id].name, 1); }
                 }
 
             } else {
@@ -199,18 +197,18 @@ impl<'a> Game<'a>
                         action: Action::Played(chain.clone()) 
                     });
 
-                    println!("{} plays: {:?}", self.players[self.curr_player_id].name, &chain);
+                    if crate::PRINT { println!("{} plays: {:?}", self.players[self.curr_player_id].name, &chain); }
 
                     match chain.last().unwrap().rank {
                         Rank::Ace => {
                             let suit = self.players[self.curr_player_id].choose_suit(&self.log);
                         
                             self.log.push(Turn { 
-                                player: Some(self.curr_player_id), 
+                                player: Some(self.curr_player_id),
                                 action: Action::Nominated(suit) 
                             });
     
-                            println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit);
+                            if crate::PRINT { println!("{} nominates: {:?}", self.players[self.curr_player_id].name, suit); }
                         },
                         Rank::King => {
                             
@@ -222,8 +220,8 @@ impl<'a> Game<'a>
                                 action: Action::PickedUp(1)
                             });
 
-                            println!("{} finished with {:?} so picks up.", 
-                                self.players[self.curr_player_id].name, chain.last().unwrap());
+                            if crate::PRINT { println!("{} finished with {:?} so picks up.", 
+                                self.players[self.curr_player_id].name, chain.last().unwrap()); }
                         },
                         _ => ()
                     }
@@ -233,7 +231,7 @@ impl<'a> Game<'a>
             }
 
             if self.players[self.curr_player_id].hand.is_empty() {
-                println!("{} wins!", self.players[self.curr_player_id].name);
+                if crate::PRINT { println!("{} wins!", self.players[self.curr_player_id].name); }
                 break;
             } else {
                 self.curr_player_id += 1;
@@ -251,6 +249,8 @@ impl<'a> Game<'a>
             map
         });
 
-        println!("Standings: {:?}", standings);
+        if crate::PRINT { println!("Standings: {:?}", standings); }
+
+        self.players.iter().map(|p| p.score).collect::<Vec<i32>>()
     }
 }
