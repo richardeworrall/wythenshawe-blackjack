@@ -30,6 +30,7 @@ pub struct Turn
 pub struct Game
 {
     pub players: Vec<Player>,
+    pub external_player_idx: usize,
     pub deck: Vec<Card>,
     pub discard_pile: Vec<Card>,
     pub log: Vec<Turn>,
@@ -38,23 +39,34 @@ pub struct Game
 
 impl Game
 {
-    pub fn new(player_types: &[StrategyType]) -> Game
+    pub fn new(player_count: usize, external_player_idx: usize) -> Game
     {
-        if player_types.len() < 2 { panic!("Two players min") };
-        if player_types.len() > 6 { panic!("Six players max") };
+        if player_count < 2 { panic!("Two players min") };
+        if player_count > 6 { panic!("Six players max") };
+
+        if external_player_idx >= player_count { panic!("Invalid external player index") };
 
         let mut players = Vec::<Player>::new();
         
-        for (i, pt) in player_types.iter().enumerate() {
-
-            let strategy = make_strategy(pt, player_types);
-
-            players.push(Player::new(
-                format!("Player {} ({})", i, strategy.name()), strategy));
+        for i in 0..player_count {
+            if i == external_player_idx {
+                let strategy = make_strategy(&StrategyType::ComputerV2, player_count);
+                players.push(Player::new(
+                    format!("Player {} ({})", external_player_idx, 
+                    strategy.name()), 
+                    strategy));
+            } else {
+                let strategy = make_strategy(&StrategyType::ComputerV1, player_count);
+                players.push(Player::new(
+                    format!("Player {} ({})", external_player_idx, 
+                    strategy.name()), 
+                    strategy));
+            };
         }
 
         let mut game = Game {
             players: players,
+            external_player_idx,
             deck: Vec::<Card>::new(),
             discard_pile: Vec::<Card>::new(),
             curr_player_id: 0,

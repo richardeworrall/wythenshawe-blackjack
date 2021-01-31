@@ -9,6 +9,7 @@ mod blackjack;
 
 use crate::game::*;
 use crate::strategy::*;
+use crate::cards::*;
 
 const PRINT : bool = false;
 
@@ -19,23 +20,35 @@ fn blackjack(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 #[pyclass]
-#[text_signature = "(g, /)"]
+#[text_signature = "(player_count, external_player_idx, /)"]
 struct GameWrapper {
     g: Game
 }
+
+
 
 #[pymethods]
 impl GameWrapper {
     
     #[new]
-    fn new(c: i32) -> Self {
+    fn new(player_count: usize, external_player_idx: usize) -> Self {
         Self {
-            g: Game::new(&vec![StrategyType::ComputerV1; c as usize])
+            g: Game::new(player_count, external_player_idx)
         }
     }
     
     #[text_signature = "($self)"]
-    fn run(&mut self) {
-        self.g.run();
+    fn observable_state(&mut self) -> Vec<f32> {
+        Vec::new()
+    }
+
+    #[text_signature = "($self, /)"]
+    fn next_valid_action(&mut self) -> Vec<i32> {
+        Vec::new()
+    }
+
+    #[text_signature = "($self, /)"]
+    fn choose_action(&mut self) -> f32 { // (state,reward)
+        0.0
     }
 }

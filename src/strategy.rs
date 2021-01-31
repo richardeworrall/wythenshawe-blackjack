@@ -1,4 +1,3 @@
-pub mod human;
 pub mod computer_v1;
 pub mod computer_v2;
 
@@ -9,7 +8,6 @@ use std::collections::HashSet;
 use crate::cards::*;
 use crate::game::*;
 
-use human::*;
 use computer_v1::*;
 use computer_v2::*;
 
@@ -23,15 +21,13 @@ pub trait Strategy {
 pub enum StrategyType
 {
     ComputerV1,
-    ComputerV2,
-    Human
+    ComputerV2
 }
 
-pub fn make_strategy<'a>(t: &StrategyType, players: &[StrategyType]) -> Box<dyn Strategy + Send>
+pub fn make_strategy<'a>(t: &StrategyType, num_players: usize) -> Box<dyn Strategy + Send>
 {
     match t {
         StrategyType::ComputerV1 => Box::new(ComputerStrategyV1 {}),
-        StrategyType::ComputerV2 => Box::new(ComputerStrategyV2::new(players)),
-        StrategyType::Human => Box::new(HumanStrategy {}),
+        StrategyType::ComputerV2 => Box::new(ComputerStrategyV2::new(num_players))
     }
 }

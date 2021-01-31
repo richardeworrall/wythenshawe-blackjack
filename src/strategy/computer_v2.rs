@@ -14,11 +14,13 @@ pub struct ComputerStrategyV2
     deck_count: usize
 }
 
+const DECK_LENGTH : usize = 52;
+
 impl ComputerStrategyV2 
 {
-    pub fn new(players: &[StrategyType]) -> ComputerStrategyV2
+    pub fn new(num_players: usize) -> ComputerStrategyV2
     {
-        let deck_count = Card::full_deck().len() - players.len() * STARTING_CARD_COUNT;
+        let deck_count = Card::full_deck().len() - num_players * STARTING_CARD_COUNT;
 
         ComputerStrategyV2 
         {
@@ -26,6 +28,16 @@ impl ComputerStrategyV2
             dead_cards: HashSet::new(),
             log_processed: 0,
             deck_count
+        }
+    }
+
+    pub fn update_feature_vector(&self, f: &mut [f32], hand: &HashSet<Card>)
+    {
+        for (i, p) in Card::full_deck().iter().enumerate()
+        {
+            f[i] = if self.live_cards.contains(p) { 1.0 } else { 0.0 };
+            f[i + DECK_LENGTH] = if self.dead_cards.contains(p) { 1.0 } else { 0.0 };
+            f[i + DECK_LENGTH + DECK_LENGTH] = if hand.contains(p) { 1.0 } else { 0.0 };
         }
     }
 
@@ -41,7 +53,7 @@ impl ComputerStrategyV2
                     }
                 },
                 Action::PickedUp(n) => {
-                    if self.deck_count - n < 0
+                    if (self.deck_count as isize - *n as isize) < 0
                     {
                         let discard_pile_size = self.dead_cards.len();
                         self.dead_cards.clear();
