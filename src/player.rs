@@ -36,12 +36,12 @@ impl Player
         }
     }
 
-    pub fn choose_next(&self, log: &[Turn]) -> Vec<Card>
+    pub fn choose_next(&mut self, log: &[Turn]) -> Vec<Card>
     {
         self.strategy.choose_next(&self.hand, log)
     }
 
-    pub fn choose_suit(&self, log: &[Turn]) -> Suit
+    pub fn choose_suit(&mut self, log: &[Turn]) -> Suit
     {
         self.strategy.choose_suit(&self.hand, log)
     }

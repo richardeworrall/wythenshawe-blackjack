@@ -71,7 +71,7 @@ fn parse_suit(c: char) -> Option<Suit>
 
 impl Strategy for HumanStrategy
 {
-    fn choose_next(&self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>
+    fn choose_next(&mut self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>
     {
         loop {
             
@@ -112,7 +112,7 @@ impl Strategy for HumanStrategy
         }   
     }
 
-    fn choose_suit(&self, hand: &HashSet<Card>, _: &[Turn]) -> Suit
+    fn choose_suit(&mut self, hand: &HashSet<Card>, _: &[Turn]) -> Suit
     {
         loop {
             
@@ -139,5 +139,5 @@ impl Strategy for HumanStrategy
         }
     }
 
-    fn name(&self) -> &str { "Human Player" }
+    fn name(&self) -> &str { "Human" }
 }

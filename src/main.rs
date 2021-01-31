@@ -18,7 +18,13 @@ fn main() {
 
     let now = std::time::Instant::now();
 
-    let player_types = vec![StrategyType::Computer; 4];
+    let player_types = 
+    [
+        StrategyType::ComputerV1,
+        StrategyType::ComputerV1,
+        StrategyType::ComputerV2,
+        StrategyType::ComputerV1
+    ];
 
     for _ in 0..NUM_GAMES
     {

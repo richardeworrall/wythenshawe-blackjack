@@ -30,7 +30,7 @@ impl GameWrapper {
     #[new]
     fn new(c: i32) -> Self {
         Self {
-            g: Game::new(&vec![StrategyType::Computer; c as usize])
+            g: Game::new(&vec![StrategyType::ComputerV1; c as usize])
         }
     }
     

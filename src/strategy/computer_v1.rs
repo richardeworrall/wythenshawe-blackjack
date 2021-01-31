@@ -5,11 +5,11 @@ use crate::strategy::*;
 
 use std::collections::{HashSet,HashMap};
 
-pub struct ComputerStrategy {}
+pub struct ComputerStrategyV1 {}
 
-impl Strategy for ComputerStrategy
+impl Strategy for ComputerStrategyV1
 {
-    fn choose_next(&self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>
+    fn choose_next(&mut self, hand: &HashSet<Card>, log: &[Turn]) -> Vec<Card>
     {
         let outstanding_penalty = outstanding_penalty(log);
         
@@ -18,12 +18,12 @@ impl Strategy for ComputerStrategy
         })
     }
     
-    fn choose_suit(&self, hand: &HashSet<Card>, _: &[Turn]) -> Suit
+    fn choose_suit(&mut self, hand: &HashSet<Card>, _: &[Turn]) -> Suit
     {
         choose_suit(hand)
     }
 
-    fn name(&self) -> &str { "ComputerStrategy" }
+    fn name(&self) -> &str { "Computer (v1)" }
 }
 
 fn choose_suit(hand: &HashSet<Card>) -> Suit
@@ -41,17 +41,13 @@ fn choose_suit(hand: &HashSet<Card>) -> Suit
 
 const PICK_UP_WEIGHTING : f32 = 10.0;
 
-fn score(outstanding_penalty: i32, chain: &[Card]) -> f32
+fn score(outstanding_penalty: usize, chain: &[Card]) -> f32
 {
-    let mut score = chain_score(chain.iter()) as f32;
+    let mut score = chain.iter().map(card_score).sum::<i32>() as f32;
 
     for i in (0..chain.len()).rev() {
         let card = chain[i];
-        if let Some(penalty) = penalty_value(card) {
-            score += penalty as f32 * PICK_UP_WEIGHTING;
-        } else {
-            return score;
-        }
+        score += penalty_value(card) as f32 * PICK_UP_WEIGHTING;
     }
 
     if outstanding_penalty > 0 {

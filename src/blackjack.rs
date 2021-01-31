@@ -5,35 +5,29 @@ use std::collections::HashSet;
 
 pub const STARTING_CARD_COUNT : usize = 7;
 
-pub fn penalty_value(card: Card) -> Option<i32>
+pub fn penalty_value(card: Card) -> usize
 {
     match card {
-        Card { rank: Rank::Jack, suit: s } if s.is_black() => Some(5),
-        Card { rank: Rank::Val(2), suit: _ } => Some(2),
-        _ => None
+        Card { rank: Rank::Jack, suit: s } if s.is_black() => 5,
+        Card { rank: Rank::Val(2), suit: _ } => 2,
+        _ => 0
     }
 }
 
-pub fn outstanding_penalty(log: &[Turn]) -> i32
+pub fn outstanding_penalty(log: &[Turn]) -> usize
 {
-    let mut penalty = 0;
+    let mut penalty : usize = 0;
 
     for turn in log.iter().rev() {
         match &turn.action {
             Action::Played(chain) => {
                 for i in (0..chain.len()).rev() {
                     let card = chain[i];
-                    if let Some(p) = penalty_value(card) {
-                        penalty += p;
-                    } else {
-                        return penalty;
-                    }
+                    penalty += penalty_value(card);
                 }
             },
             Action::First(card) => {
-                if let Some(p) = penalty_value(*card) {
-                    penalty += p;
-                }
+                penalty += penalty_value(*card);
                 return penalty;
             }
             _ => { return penalty; }
@@ -52,13 +46,6 @@ pub fn card_score(card: &Card) -> i32
         Card { rank: Rank::Jack, suit: s } if s.is_black() => 15,
         Card { rank: r, suit: _ } => r.face_value() 
     }
-}
-
-pub fn chain_score<'a, T>(chain: T) -> i32
-where 
-    T : Iterator<Item = &'a Card>
-{
-    chain.map(|c| card_score(c)).sum()
 }
 
 pub fn can_follow(log: &[Turn], next: Card) -> bool

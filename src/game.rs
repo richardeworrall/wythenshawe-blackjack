@@ -14,7 +14,7 @@ pub enum Action
 {
     Played(Vec<Card>),
     Nominated(Suit),
-    PickedUp(i32),
+    PickedUp(usize),
     First(Card),
     Skipped
 }
@@ -47,7 +47,7 @@ impl Game
         
         for (i, pt) in player_types.iter().enumerate() {
 
-            let strategy = make_strategy(pt);
+            let strategy = make_strategy(pt, player_types);
 
             players.push(Player::new(
                 format!("Player {} ({})", i, strategy.name()), strategy));
@@ -135,7 +135,7 @@ impl Game
                 let raw_penalty = outstanding_penalty(&self.log);
 
                 let penalty = raw_penalty
-                                .min((self.deck.len() + self.discard_pile.len()) as i32);
+                                .min(self.deck.len() + self.discard_pile.len());
 
                 if penalty > 0 {
 
@@ -241,7 +241,7 @@ impl Game
 
         for p in self.players.iter_mut()
         {
-            p.score += chain_score(p.hand.iter())
+            p.score += p.hand.iter().map(card_score).sum::<i32>();
         }
 
         let standings = self.players.iter().fold(HashMap::new(), |mut map, p| {
