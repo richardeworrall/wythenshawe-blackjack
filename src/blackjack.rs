@@ -23,7 +23,13 @@ pub fn outstanding_penalty(log: &[Turn]) -> usize
             Action::Played(chain) => {
                 for i in (0..chain.len()).rev() {
                     let card = chain[i];
-                    penalty += penalty_value(card);
+                    let this_card_penalty = penalty_value(card);
+                    
+                    if this_card_penalty > 0 {
+                        penalty += this_card_penalty;
+                    } else {
+                        return penalty;
+                    }
                 }
             },
             Action::First(card) => {

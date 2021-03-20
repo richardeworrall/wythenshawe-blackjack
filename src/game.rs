@@ -107,6 +107,7 @@ impl Game
                 Card { rank: Rank::Val(8), suit: _ } => true,
                 _ => false
             },
+            Action::First(Card { rank: Rank::Val(8), suit: _ }) => true,
             _ => false
         }
     }
